@@ -34,6 +34,11 @@ from util import PidFile, get_hostname, plural, get_uuid, chunks
 import requests
 import simplejson as json
 
+# urllib3 logs a bunch of stuff at the info level
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.WARN)
+requests_log.propagate = True
+
 log = logging.getLogger('dogstatsd')
 
 # Dogstatsd constants in seconds
@@ -365,7 +370,7 @@ def init(config_path=None, use_watchdog=False, use_forwarder=False, args=None):
         sleep(4)
         sys.exit(0)
 
-    log.debug("Configurating     dogstatsd")
+    log.debug("Configuring dogstatsd")
 
     port      = c['dogstatsd_port']
     interval  = DOGSTATSD_FLUSH_INTERVAL
@@ -391,8 +396,11 @@ def init(config_path=None, use_watchdog=False, use_forwarder=False, args=None):
         hostname,
         aggregator_interval,
         recent_point_threshold=recent_point_threshold,
-        formatter = get_formatter(c)
-        )
+        formatter=get_formatter(c),
+        histogram_aggregates=c.get('histogram_aggregates'),
+        histogram_percentiles=c.get('histogram_percentiles'),
+        utf8_decoding=c['utf8_decoding']
+    )
 
     # Start the reporting thread.
     reporter = Reporter(interval, aggregator, target, api_key, use_watchdog, event_chunk_size)
